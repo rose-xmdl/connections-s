@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
                     
                     try {
                         const sessionData = fs.readFileSync(rf, 'utf8');
-                        let md = "NARUTO-XMD~" + sessionData;
+                        let md = sessionData;
                         let code = await sock.sendMessage(sock.user.id, { text: md });
                         let desc = `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
 📁 Upload the creds.json file to your session folder.
