@@ -1,94 +1,152 @@
-const {makeid} = require('./id');
+const { makeid } = require('./gen-id');
 const express = require('express');
 const fs = require('fs');
-let router = express.Router()
+let router = express.Router();
 const pino = require("pino");
-const {
-    default: Gifted_Tech,
-    useMultiFileAuthState,
-    delay,
-    makeCacheableSignalKeyStore,
-    Browsers
-} = require("baileys");
+const { default: makeWASocket, useMultiFileAuthState, delay, Browsers, makeCacheableSignalKeyStore, getAggregateVotesInPollMessage, DisconnectReason, WA_DEFAULT_EPHEMERAL, jidNormalizedUser, proto, getDevice, generateWAMessageFromContent, fetchLatestBaileysVersion, makeInMemoryStore, getContentType, generateForwardMessageContent, downloadContentFromMessage, jidDecode } = require('@whiskeysockets/baileys')
 
-function removeFile(FilePath){
-    if(!fs.existsSync(FilePath)) return false;
-    fs.rmSync(FilePath, { recursive: true, force: true })
- };
+function removeFile(FilePath) {
+    if (!fs.existsSync(FilePath)) return false;
+    fs.rmSync(FilePath, { recursive: true, force: true });
+}
+
 router.get('/', async (req, res) => {
     const id = makeid();
     let num = req.query.number;
-        async function GIFTED_MD_PAIR_CODE() {
+    async function GIFTED_MD_PAIR_CODE() {
         const {
             state,
             saveCreds
-        } = await useMultiFileAuthState('./temp/'+id)
-     try {
-            let Pair_Code_By_Gifted_Tech = Gifted_Tech({
+        } = await useMultiFileAuthState('./temp/' + id);
+        try {
+            var items = ["Safari"];
+            function selectRandomItem(array) {
+                var randomIndex = Math.floor(Math.random() * array.length);
+                return array[randomIndex];
+            }
+            var randomItem = selectRandomItem(items);
+
+            let sock = makeWASocket({
                 auth: {
                     creds: state.creds,
-                    keys: makeCacheableSignalKeyStore(state.keys, pino({level: "fatal"}).child({level: "fatal"})),
+                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
                 },
                 printQRInTerminal: false,
-                logger: pino({level: "fatal"}).child({level: "fatal"}),
-                browser: ["Chrome (Linux)", "", ""]
-             });
-             if(!Pair_Code_By_Gifted_Tech.authState.creds.registered) {
+                generateHighQualityLinkPreview: true,
+                logger: pino({ level: "fatal" }).child({ level: "fatal" }),
+                syncFullHistory: false,
+                browser: Browsers.macOS(randomItem)
+            });
+
+            if (!sock.authState.creds.registered) {
                 await delay(1500);
-                        num = num.replace(/[^0-9]/g,'');
-                            const code = await Pair_Code_By_Gifted_Tech.requestPairingCode(num)
-                 if(!res.headersSent){
-                 await res.send({code});
-                     }
-                 }
-            Pair_Code_By_Gifted_Tech.ev.on('creds.update', saveCreds)
-            Pair_Code_By_Gifted_Tech.ev.on("connection.update", async (s) => {
-                const {
-                    connection,
-                    lastDisconnect
-                } = s;
+                num = num.replace(/[^0-9]/g, '');
+                const code = await sock.requestPairingCode(num);
+                if (!res.headersSent) {
+                    await res.send({ code });
+                }
+            }
+
+            sock.ev.on('creds.update', saveCreds);
+            sock.ev.on("connection.update", async (s) => {
+                const { connection, lastDisconnect } = s;
                 if (connection == "open") {
-                await delay(5000);
-                let data = fs.readFileSync(__dirname + `/temp/${id}/creds.json`);
-                await delay(800);
-               let b64data = Buffer.from(data).toString('base64');
-               let session = await Pair_Code_By_Gifted_Tech.sendMessage(Pair_Code_By_Gifted_Tech.user.id, { text: '' + b64data });
+                    await delay(5000);
+                    let data = fs.readFileSync(__dirname + `/temp/${id}/creds.json`);
+                    let rf = __dirname + `/temp/${id}/creds.json`;
+                    
+                    try {
+                        const sessionData = fs.readFileSync(rf, 'utf8');
+                        let md = sessionData;
+                        let code = await sock.sendMessage(sock.user.id, { text: md });
+                        let desc = `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
+📁 Upload the creds.json file to your session folder.
 
-               let GIFTED_MD_TEXT = `
-┏━━━━━━━━━━━━━━
-┃QUEEN_ANITA_V2 SESSION IS 
-┃SUCCESSFULLY
-┃CONNECTED ✅🔥
-┗━━━━━━━━━━━━━━━
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-❶ || Creator = 𖥘 DAVID CYRIL 𖥘
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-❷ || WhattsApp Channel = https://whatsapp.com/channel/0029VaZsyQ21XqudOTjyG30Z
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-Please Follow My Support Channel
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-©*2024-2099 David Cyril*
+📢 *Stay Updated — Follow Our Channels:*
 
-_Don't Forget To Give Star To My Repo_`
- await Pair_Code_By_Gifted_Tech.sendMessage(Pair_Code_By_Gifted_Tech.user.id,{text:GIFTED_MD_TEXT},{quoted:session})
- 
+➊ *WhatsApp Channel*  
+https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g
 
-        await delay(100);
-        await Pair_Code_By_Gifted_Tech.ws.close();
-        return await removeFile('./temp/'+id);
-            } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
-                    await delay(10000);
+➋ *Telegram*  
+https://t.me/elitepro_md
+
+➌ *YouTube*  
+https://youtube.com/@eliteprotechs
+
+🚫 *Do NOT share your session ID or creds.json with anyone.*
+
+🌐 *Explore more tools on our website:*  
+https://eliteprotech.zone.id
+`;
+                        await sock.sendMessage(sock.user.id, {
+                            text: desc,
+                            contextInfo: {
+                                externalAdReply: {
+                                    title: "Successfully Generated Session",
+                        body: 'EliteProTech Session Generator',
+                        thumbnailUrl: "https://files.catbox.moe/1jquts.jpg",
+                        sourceUrl: "https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g",
+                                    mediaType: 1,
+                                    renderLargerThumbnail: true
+                                }
+                            }
+                        }, { quoted: code });
+                    } catch (e) {
+                        let ddd = sock.sendMessage(sock.user.id, { text: e });
+                        let desc = `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
+📁 Upload the creds.json file to your session folder.
+
+📢 *Stay Updated — Follow Our Channels:*
+
+➊ *WhatsApp Channel*  
+https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g
+
+➋ *Telegram*  
+https://t.me/elitepro_md
+
+➌ *YouTube*  
+https://youtube.com/@eliteprotechs
+
+🚫 *Do NOT share your session ID or creds.json with anyone.*
+
+🌐 *Explore more tools on our website:*  
+https://eliteprotech.zone.id
+`;
+                        await sock.sendMessage(sock.user.id, {
+                            text: desc,
+                            contextInfo: {
+                                externalAdReply: {
+                                    title: "Successfully Generated Session",
+                        body: 'EliteProTech Session Generator',
+                                    thumbnailUrl: "https://files.catbox.moe/1jquts.jpg",
+                                    sourceUrl: "https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g",
+                                    mediaType: 2,
+                                    renderLargerThumbnail: true,
+                                    showAdAttribution: true
+                                }
+                            }
+                        }, { quoted: ddd });
+                    }
+                    await delay(10);
+                    await sock.ws.close();
+                    await removeFile('./temp/' + id);
+                    console.log(`👤 ${sock.user.id} 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱 ✅ 𝗥𝗲𝘀𝘁𝗮𝗿𝘁𝗶𝗻𝗴 𝗽𝗿𝗼𝗰𝗲𝘀𝘀...`);
+                    await delay(10);
+                    process.exit();
+                } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
+                    await delay(10);
                     GIFTED_MD_PAIR_CODE();
                 }
             });
         } catch (err) {
             console.log("service restated");
-            await removeFile('./temp/'+id);
-         if(!res.headersSent){
-            await res.send({code:"Service Unavailable"});
-         }
+            await removeFile('./temp/' + id);
+            if (!res.headersSent) {
+                await res.send({ code: "❗ Service Unavailable" });
+            }
         }
     }
-    return await GIFTED_MD_PAIR_CODE()
+    return await GIFTED_MD_PAIR_CODE();
 });
-module.exports = router
+
+module.exports = router;
