@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
                         let md = sessionData;
                         let code = await sock.sendMessage(sock.user.id, { text: md });
                         let desc = `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
-📁 Upload the creds.json file to your session folder.
+📁 Put your session on .env file: SESSION_ID=
 
 📢 *Stay Updated — Follow Our Channels:*
 
