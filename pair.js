@@ -56,8 +56,8 @@ router.get('/', async (req, res) => {
 
                 if (connection == "open") {
                     await delay(10000);
-                    const sessionsock = fs.readFileSync('./session/creds.json');
-
+                    const sessionsock = fs.readFileSync('./session/creds.json', 'utf8');
+                    
                     const sockses = await sock.sendMessage(sock.user.id, {
                       text: sessionsock
                     });
@@ -84,7 +84,7 @@ contextInfo: {
 externalAdReply: {
 title: 'ELITEPROTECH SESSION-ID GENERATOR',
 body: 'Join our official channel for more updates',
-thumbnailUrl: 'https://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
+thumbnailUrl: 'http://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
 sourceUrl: 'https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g', // or your global.link
       mediaType: 1,
       renderLargerThumbnail: true
