@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
                     });
 await sock.sendMessage(sock.user.id, {
   text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
-📁 Upload the creds.json file to your session folder.
+📁 Upload SESSION_ID (creds.json) on session folder or add it to your .env file: SESSION_ID=
 
 📢 *Stay Updated — Follow Our Channels:*
 
