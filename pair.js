@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path'); // Added for path manipulation
+const path = require('path');
 let router = express.Router();
 const pino = require("pino");
 const {
@@ -47,33 +47,42 @@ router.get('/', async (req, res) => {
                 browser: ["Ubuntu", "Chrome", "20.0.04"],
             });
 
+            sock.ev.on('creds.update', saveCreds);
+            
+            // Handle pairing code request
             if (!sock.authState.creds.registered) {
                 await delay(1500);
                 num = num.replace(/[^0-9]/g, '');
                 const code = await sock.requestPairingCode(num);
 
                 if (!res.headersSent) {
-                    await res.send({ code, version });
+                    res.send({ code, version });
                 }
             }
 
-            sock.ev.on('creds.update', saveCreds);
-            sock.ev.on("connection.update", async (s) => {
-                const {
-                    connection,
-                    lastDisconnect
-                } = s;
+            sock.ev.on("connection.update", async (update) => {
+                const { connection, lastDisconnect, qr } = update;
 
-                if (connection == "open") {
-                    // Use in-memory credentials instead of reading file
+                // Handle QR code generation if needed
+                if (qr) {
+                    console.log("QR received, but pairing code should be used");
+                }
+
+                if (connection === "open") {
+                    // Wait a moment to ensure session is fully established
+                    await delay(2000);
+                    
+                    // Use in-memory credentials
                     const sessionsock = JSON.stringify(state.creds);
                     
+                    // Send session credentials to user
                     const sockses = await sock.sendMessage(sock.user.id, {
-                      text: sessionsock
+                        text: sessionsock
                     });
                     
+                    // Send success message
                     await sock.sendMessage(sock.user.id, {
-                      text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
+                        text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
 📁 Upload SESSION_ID (creds.json) on session folder or add it to your .env file: SESSION_ID=
 
 📢 *Stay Updated — Follow Our Channels:*
@@ -91,39 +100,46 @@ https://youtube.com/@eliteprotechs
 
 🌐 *Explore more tools on our website:*  
 https://eliteprotech.zone.id`,
-                      contextInfo: {
-                        externalAdReply: {
-                          title: 'ELITEPROTECH SESSION-ID GENERATOR',
-                          body: 'Join our official channel for more updates',
-                          thumbnailUrl: 'http://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
-                          sourceUrl: 'https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g',
-                          mediaType: 1,
-                          renderLargerThumbnail: true
+                        contextInfo: {
+                            externalAdReply: {
+                                title: 'ELITEPROTECH SESSION-ID GENERATOR',
+                                body: 'Join our official channel for more updates',
+                                thumbnailUrl: 'http://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
+                                sourceUrl: 'https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g',
+                                mediaType: 1,
+                                renderLargerThumbnail: true
+                            }
                         }
-                      }
                     }, { quoted: sockses });
 
-                    // Close connection and clean up
+                    // Add delay before cleanup
+                    await delay(3000);
+                    
+                    // Close connection gracefully
                     await sock.end();
+                    
+                    // Clean up session files
                     removeFile(sessionPath);
                 }
 
-                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
-                    // Remove reconnection attempt
-                    console.log("Connection closed", lastDisconnect.error);
-                    removeFile(sessionPath);
+                if (connection === "close") {
+                    if (lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
+                        // Add delay before reconnecting
+                        await delay(2000);
+                        removeFile(sessionPath);
+                    }
                 }
             });
         } catch (err) {
             console.log("Error occurred:", err);
             removeFile(sessionPath);
             if (!res.headersSent) {
-                await res.send({ code: "Service Unavailable", version });
+                res.send({ code: "Service Unavailable", version });
             }
         }
     }
 
-    return await PairCode();
+    return PairCode();
 });
 
 process.on('uncaughtException', function (err) {
