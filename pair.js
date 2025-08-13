@@ -9,14 +9,14 @@ const {
     makeCacheableSignalKeyStore
 } = require("baileys");
 
-// Ensure session folder exists
-if (!fs.existsSync('./session')) {
-    fs.mkdirSync('./session', { recursive: true });
-}
-
 function removeFile(FilePath) {
     if (!fs.existsSync(FilePath)) return false;
     fs.rmSync(FilePath, { recursive: true, force: true });
+}
+
+// Ensure session folder exists
+if (!fs.existsSync('./session')) {
+    fs.mkdirSync('./session', { recursive: true });
 }
 
 // Define version information
@@ -26,10 +26,7 @@ router.get('/', async (req, res) => {
     let num = req.query.number;
 
     async function PairCode() {
-        const {
-            state,
-            saveCreds
-        } = await useMultiFileAuthState(`./session`);
+        const { state, saveCreds } = await useMultiFileAuthState(`./session`);
 
         try {
             let sock = makeWASocket({
@@ -98,14 +95,14 @@ https://eliteprotech.zone.id`,
                             }
                         }, { quoted: sockses });
                     } else {
-                        console.warn('⚠️ creds.json not found yet, skipping send.');
+                        console.warn("⚠️ creds.json not found yet, skipping send.");
                     }
 
                     await delay(100);
                     return await removeFile('./session');
                 }
 
-                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output?.statusCode != 401) {
+                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
                     await delay(10000);
                     PairCode();
                 }
