@@ -9,7 +9,6 @@ const {
     makeCacheableSignalKeyStore
 } = require("baileys");
 
-// Remove folder utility
 function removeFile(FilePath) {
     if (!fs.existsSync(FilePath)) return false;
     fs.rmSync(FilePath, { recursive: true, force: true });
@@ -18,14 +17,21 @@ function removeFile(FilePath) {
 // Define version information
 const version = [2, 3000, 1015901307];
 
+// Track active sessions to prevent conflicts
+const activeSessions = new Map();
+
 router.get('/', async (req, res) => {
     let num = req.query.number;
-    if (!num) return res.status(400).send({ error: 'Number required', version });
+    const sessionId = `session_${Date.now()}`; // Unique session identifier
 
     async function PairCode() {
-        // Create a unique session folder per request
-        const sessionPath = `./session_${Date.now()}`;
-        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+        // Clean up any existing session files
+        removeFile('./session');
+
+        const {
+            state,
+            saveCreds
+        } = await useMultiFileAuthState(`./session`);
 
         try {
             let sock = makeWASocket({
@@ -38,7 +44,9 @@ router.get('/', async (req, res) => {
                 browser: ["Ubuntu", "Chrome", "20.0.04"],
             });
 
-            // Request pairing code
+            // Track this session
+            activeSessions.set(sessionId, sock);
+
             if (!sock.authState.creds.registered) {
                 await delay(1500);
                 num = num.replace(/[^0-9]/g, '');
@@ -50,15 +58,21 @@ router.get('/', async (req, res) => {
             }
 
             sock.ev.on('creds.update', saveCreds);
-
+            
             sock.ev.on("connection.update", async (s) => {
-                const { connection, lastDisconnect } = s;
+                const {
+                    connection,
+                    lastDisconnect
+                } = s;
 
                 if (connection == "open") {
                     await delay(10000);
-                    const sessionsock = fs.readFileSync(sessionPath + '/creds.json', 'utf8');
-
-                    const sockses = await sock.sendMessage(sock.user.id, { text: sessionsock });
+                    const sessionsock = fs.readFileSync('./session/creds.json', 'utf8');
+                    
+                    const sockses = await sock.sendMessage(sock.user.id, {
+                        text: sessionsock
+                    });
+                    
                     await sock.sendMessage(sock.user.id, {
                         text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
 📁 Upload SESSION_ID (creds.json) on session folder or add it to your .env file: SESSION_ID=
@@ -91,17 +105,26 @@ https://eliteprotech.zone.id`,
                     }, { quoted: sockses });
 
                     await delay(100);
-                    removeFile(sessionPath); // delete only this session
+                    // Clean up
+                    activeSessions.delete(sessionId);
+                    await sock.ws.close();
+                    return await removeFile('./session');
                 }
 
-                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output?.statusCode != 401) {
+                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
                     await delay(10000);
+                    // Clean up before retrying
+                    activeSessions.delete(sessionId);
+                    if (sock.ws) await sock.ws.close();
+                    await removeFile('./session');
                     PairCode();
                 }
             });
         } catch (err) {
-            console.log("service restarted", err);
-            removeFile(sessionPath);
+            console.log("Error occurred:", err.message);
+            // Clean up on error
+            activeSessions.delete(sessionId);
+            await removeFile('./session');
             if (!res.headersSent) {
                 await res.send({ code: "Service Unavailable", version });
             }
@@ -109,6 +132,14 @@ https://eliteprotech.zone.id`,
     }
 
     return await PairCode();
+});
+
+// Clean up any remaining sessions on process exit
+process.on('exit', () => {
+    activeSessions.forEach(async (sock, id) => {
+        if (sock.ws) await sock.ws.close();
+        activeSessions.delete(id);
+    });
 });
 
 process.on('uncaughtException', function (err) {
