@@ -9,6 +9,11 @@ const {
     makeCacheableSignalKeyStore
 } = require("baileys");
 
+// Ensure session folder exists
+if (!fs.existsSync('./session')) {
+    fs.mkdirSync('./session', { recursive: true });
+}
+
 function removeFile(FilePath) {
     if (!fs.existsSync(FilePath)) return false;
     fs.rmSync(FilePath, { recursive: true, force: true });
@@ -49,20 +54,21 @@ router.get('/', async (req, res) => {
 
             sock.ev.on('creds.update', saveCreds);
             sock.ev.on("connection.update", async (s) => {
-                const {
-                    connection,
-                    lastDisconnect
-                } = s;
+                const { connection, lastDisconnect } = s;
 
                 if (connection == "open") {
                     await delay(10000);
-                    const sessionsock = fs.readFileSync('./session/creds.json', 'utf8');
-                    
-                    const sockses = await sock.sendMessage(sock.user.id, {
-                      text: sessionsock
-                    });
-await sock.sendMessage(sock.user.id, {
-  text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
+
+                    const credsPath = './session/creds.json';
+                    if (fs.existsSync(credsPath)) {
+                        const sessionsock = fs.readFileSync(credsPath, 'utf8');
+
+                        const sockses = await sock.sendMessage(sock.user.id, {
+                            text: sessionsock
+                        });
+
+                        await sock.sendMessage(sock.user.id, {
+                            text: `✅ *SESSION ID OBTAINED SUCCESSFULLY!*  
 📁 Upload SESSION_ID (creds.json) on session folder or add it to your .env file: SESSION_ID=
 
 📢 *Stay Updated — Follow Our Channels:*
@@ -80,23 +86,26 @@ https://youtube.com/@eliteprotechs
 
 🌐 *Explore more tools on our website:*  
 https://eliteprotech.zone.id`,
-contextInfo: {
-externalAdReply: {
-title: 'ELITEPROTECH SESSION-ID GENERATOR',
-body: 'Join our official channel for more updates',
-thumbnailUrl: 'http://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
-sourceUrl: 'https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g', // or your global.link
-      mediaType: 1,
-      renderLargerThumbnail: true
-    }
-  }
-}, { quoted: sockses });
+                            contextInfo: {
+                                externalAdReply: {
+                                    title: 'ELITEPROTECH SESSION-ID GENERATOR',
+                                    body: 'Join our official channel for more updates',
+                                    thumbnailUrl: 'http://elitepro-url-clouds.onrender.com/18c0e09bc35e16fae8fe7a34647a5c82.jpg',
+                                    sourceUrl: 'https://whatsapp.com/channel/0029VaXaqHII1rcmdDBBsd3g',
+                                    mediaType: 1,
+                                    renderLargerThumbnail: true
+                                }
+                            }
+                        }, { quoted: sockses });
+                    } else {
+                        console.warn('⚠️ creds.json not found yet, skipping send.');
+                    }
 
                     await delay(100);
                     return await removeFile('./session');
                 }
 
-                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode != 401) {
+                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output?.statusCode != 401) {
                     await delay(10000);
                     PairCode();
                 }
